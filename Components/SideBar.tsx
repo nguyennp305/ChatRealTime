@@ -1,7 +1,7 @@
 import Avatar from '@mui/material/Avatar'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import React from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
 import ChatIcon from '@mui/icons-material/Chat'
 import MoreVerticalIcon from '@mui/icons-material/MoreVert'
@@ -9,7 +9,17 @@ import LogOutIcon from '@mui/icons-material/LogOut'
 import SearchIcon from '@mui/icons-material/Search'
 import Button from '@mui/material/Button'
 import { signOut } from 'firebase/auth'
-import { auth } from '@/config/firebase'
+import { auth, db } from '@/config/firebase'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import { TextField, DialogActions } from '@mui/material'
+import { useAuthState } from 'react-firebase-hooks/auth'
+import * as EmailValidator from 'email-validator'
+import { async } from '@firebase/util'
+import { addDoc, collection } from 'firebase/firestore'
+
 
 
 const StyledContainer = styled.div`
@@ -59,6 +69,48 @@ border-bottom: 1px solid whitesmoke;
 
 
 const SideBar = () => {
+    const [loggerInUser, _loading, error] = useAuthState(auth);
+    const [isOpenNewConversationDialog, setIsOpenNewConversationDialog] = useState(false)
+    // trường ghi để thay đổi nội dung input email trong isOpenNewConversation. 
+    const [recipientEmail, setRecipientEmail] = useState('')
+    // hàm để mở ConversationDialog
+    const toggleNewConversationDialog = (isOpen: boolean) => {
+        setIsOpenNewConversationDialog(isOpen)
+
+        if (!isOpen) {
+            setRecipientEmail('')
+        }
+    }
+
+    const closeNewConversationDialog = () => {
+        toggleNewConversationDialog(false)
+    }
+
+    // Check xem đã gửi yêu cầu cho email chưa, nếu đã gửi thì không đc gửi lại nữa.
+    const isConverStationAlreadyExist = async (recipientEmail: string) => {
+        
+    }
+
+    // nếu mời chính mình thì không cho phép.
+    const isInvitingSelf = recipientEmail === loggerInUser?.email
+
+    const createConversation = async() => {
+        if (!recipientEmail) return
+        // nếu là email thì trả về true
+        if (EmailValidator.validate(recipientEmail) && !isInvitingSelf)
+        // Add conversation to database 'conversations collection'
+         // A conversation is betwwen the current logged in user and user invited.
+
+         await addDoc(collection(db, 'conversations'), {
+            users: [loggerInUser?.email, recipientEmail]
+            
+         }
+)
+
+        closeNewConversationDialog()
+        
+    }
+
     const logOut = async() => {
         try {
             await signOut(auth)
@@ -71,8 +123,8 @@ const SideBar = () => {
     <StyledContainer>
 
         <StyledHeader>
-            <Tooltip title='user email' placement='right'>
-            <StyledUserAvatar/>
+            <Tooltip title={loggerInUser?.email as string} placement='right'>
+            <StyledUserAvatar src={loggerInUser?.photoURL || ''}/>
             </Tooltip>
 
             <div>
@@ -96,7 +148,34 @@ const SideBar = () => {
 
         </StyledSearch>
 
-        <StyledSidebarButton>START A NEW CONVERSATION</StyledSidebarButton>
+        <StyledSidebarButton onClick={() => {
+            toggleNewConversationDialog(true)
+        }}>START A NEW CONVERSATION</StyledSidebarButton>
+
+        {/* List of conversations */}
+
+        <Dialog open={isOpenNewConversationDialog} onClose={closeNewConversationDialog}>
+        <DialogTitle>New Conversation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please enter a Google email address for the user you wish to chat
+          </DialogContentText>
+          <TextField
+            autoFocus
+            label="Email Address"
+            type="email"
+            fullWidth
+            variant="standard"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeNewConversationDialog}>Cancel</Button>
+          <Button disabled={!recipientEmail} onClick={createConversation}>Create</Button>
+        </DialogActions>
+      </Dialog>
+
     </StyledContainer>
   )
 }

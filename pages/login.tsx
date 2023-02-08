@@ -5,7 +5,7 @@ import styled from "styled-components";
 import Image from "next/image";
 import WhatsAppLogo from ".././assets/whatsapplogo.png";
 import { useSignInWithGoogle } from "react-firebase-hooks/auth";
-import { auth } from "@/config/firebase";
+import { auth } from "../config/firebase";
 
 const StyledContainer = styled.div`
   height: 100vh;
